@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  stock-daily:
+    build: .
+    container_name: stock-daily
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      - DB_HOST=192.168.1.85  # 外部MySQL主机地址
+      - DB_PORT=3306             # MySQL端口
+      - DB_USER=root            # MySQL用户名
+      - DB_PASSWORD=lf123456    # MySQL密码
+      - DB_NAME=stock           # 数据库名
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - stock-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: stock-mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=lf123456
+      - MYSQL_DATABASE=stock
+      - TZ=Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - stock-network
+
+networks:
+  stock-network:
+    driver: bridge
+
+volumes:
+  mysql-data: 

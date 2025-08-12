@@ -1,0 +1,14 @@
+# 示例定时任务配置
+# 分 时 日 月 周 命令
+
+# 容器启动后立即执行示例任务
+@reboot /usr/local/bin/python3 /app/scripts/sample_task.py >> /app/logs/cron.log 2>&1
+
+# 每天下午3:30执行数据更新（股市收盘后）
+30 15 * * 1-5 cd /app/scripts/tushare && /usr/local/bin/python3 batch_update.py --start_date $(date +\%Y-\%m-\%d) >> /app/logs/batch_update.log 2>&1
+
+# 东方财富资金流向数据（每天15:30和20:50各抓取一次）
+30 15 * * 1-5 cd /app/scripts/dfcf && /usr/local/bin/python3 stock_daily_money_flow.py >> /app/logs/dfcf_money_flow.log 2>&1
+50 20 * * 1-5 cd /app/scripts/dfcf && /usr/local/bin/python3 stock_daily_money_flow.py >> /app/logs/dfcf_money_flow.log 2>&1
+
+# 在这里添加更多的定时任务... 

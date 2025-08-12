@@ -1,5 +1,5 @@
-# 使用官方Python镜像作为基础镜像，指定平台
-FROM --platform=linux/arm64 python:3.9-slim
+# 使用官方Python镜像作为基础镜像
+FROM python:3.9-slim
 
 # 设置时区环境变量
 ENV TZ=Asia/Shanghai

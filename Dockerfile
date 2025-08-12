@@ -35,4 +35,4 @@ RUN touch /app/logs/cron.log
 RUN crontab /etc/cron.d/python-cron
 
 # 启动命令
-CMD cron && tail -f /app/logs/cron.log 
+CMD cron && cron -f 2>&1 

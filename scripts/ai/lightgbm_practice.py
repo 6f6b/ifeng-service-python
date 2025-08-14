@@ -32,35 +32,31 @@ def get_training_data(stock_codes=['600519.SH'], start_date='20250201', end_date
     """获取训练数据"""
     conn = pymysql.connect(**DB_CONFIG, cursorclass=DictCursor)
     try:
-        # SQL查询，合并日线数据和资金流数据
+        # SQL查询，合并 stock_factor_pro 和 stock_moneyflow_dc
         sql = """
         SELECT 
-            d.trade_date,
-            d.ts_code,
-            d.pct_chg,
-            d.vol,
-            d.amount,
-            -- 计算各类资金净流入（买入金额 - 卖出金额）
-            (m.buy_sm_amount - m.sell_sm_amount) as small_net,
-            (m.buy_md_amount - m.sell_md_amount) as medium_net,
-            (m.buy_lg_amount - m.sell_lg_amount) as large_net,
-            (m.buy_elg_amount - m.sell_elg_amount) as super_large_net,
-            m.net_mf_amount as total_net
-        FROM stock_daily d
-        LEFT JOIN stock_moneyflow m ON d.ts_code = m.ts_code AND d.trade_date = m.trade_date
-        WHERE d.ts_code IN ({})
-        AND d.trade_date BETWEEN %s AND %s
-        ORDER BY d.ts_code, d.trade_date
+            f.trade_date,
+            f.open, f.high, f.low, f.close, f.pre_close, f.change, f.pct_chg,
+            f.vol, f.amount, f.turnover_rate, f.volume_ratio, f.vr,
+            f.macd_dif, f.macd_dea, f.macd,
+            f.kdj_k, f.kdj_d, f.kdj_j,
+            f.rsi_6, f.rsi_12, f.rsi_24,
+            f.boll_upper, f.boll_mid, f.boll_lower,
+            f.ma_5, f.ma_10, f.ma_20, f.ma_30, f.ma_60,
+            f.bias1, f.bias2, f.bias3,
+            f.cci,
+            f.dmi_pdi, f.dmi_mdi, f.dmi_adx, f.dmi_adxr,
+            f.updays, f.downdays,
+            m.net_amount, m.net_amount_rate, m.buy_elg_amount, m.buy_elg_amount_rate,
+            m.buy_lg_amount, m.buy_lg_amount_rate
+        FROM stock_factor_pro f
+        LEFT JOIN stock_moneyflow_dc m ON f.ts_code = m.ts_code AND f.trade_date = m.trade_date
+        WHERE f.ts_code IN ({})
+        AND f.trade_date BETWEEN %s AND %s
+        ORDER BY f.ts_code, f.trade_date
         """.format(','.join(['%s'] * len(stock_codes)))
         
-        print("\n=== SQL查询 ===")
-        print("SQL语句:", sql)
         params = stock_codes + [start_date, end_date]
-        print("参数:", params)
-        print("完整SQL:", sql.replace("%s", "'{}'").format(*params))
-        print("============\n")
-        
-        # 使用cursor直接执行查询
         cursor = conn.cursor()
         cursor.execute(sql, params)
         rows = cursor.fetchall()
@@ -68,154 +64,97 @@ def get_training_data(stock_codes=['600519.SH'], start_date='20250201', end_date
         # 获取列名
         columns = [desc[0] for desc in cursor.description]
         
-        print("\n=== 原始数据验证 ===")
-        print("列名:", columns)
-        print("前几行数据:")
-        for row in list(rows)[:5]:
-            print(row)
-        print("=================\n")
-        
-        # 使用获取的数据创建DataFrame
+        # 创建DataFrame
         df = pd.DataFrame(rows, columns=columns)
-        
+        print(df.head())
         # 转换数值型列
-        numeric_cols = ['pct_chg', 'vol', 'amount', 'small_net', 'medium_net', 
-                       'large_net', 'super_large_net', 'total_net']
+        numeric_cols = columns[1:]  # 除去 trade_date
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        print("\n=== DataFrame验证 ===")
-        print("DataFrame 形状:", df.shape)
-        print("列名:", df.columns.tolist())
-        print("数据类型:\n", df.dtypes)
-        print("前几行数据:\n", df.head())
-        print("=================\n")
-        
         # 将trade_date转换为datetime
-        print("\n=== 日期转换验证 ===")
-        print("转换前 trade_date 类型:", df['trade_date'].dtype)
-        print("转换前样例:\n", df['trade_date'].head())
-        
         df['trade_date'] = pd.to_datetime(df['trade_date'])
         
-        print("\n转换后 trade_date 类型:", df['trade_date'].dtype)
-        print("转换后样例:\n", df['trade_date'].head())
-        print("=================\n")
-        
-        df['weekday'] = df['trade_date'].dt.weekday.astype('float64')  # 转换为float64
-        
-        # 使用哈希编码股票代码
-        df['stock_code_encoded'] = df['ts_code'].apply(encode_stock_code).astype('float64')
-        
-        print("\n===加入weekday和股票代码编码后 DataFrame验证 ===")
-        print("DataFrame 形状:", df.shape)
-        print("列名:", df.columns.tolist())
-        print("数据类型:\n", df.dtypes)
-        print("股票代码映射示例:")
-        # 打印所有唯一股票代码的映射
-        stock_mappings = {code: encode_stock_code(code) for code in sorted(df['ts_code'].unique())}
-        for code, encoded in stock_mappings.items():
-            print(f"{code}: {encoded:,}")  # 使用千位分隔符格式化数字
-        print("前几行数据:\n", df.head(20))
-        print("=================\n")
-
-        # ===== 生成特征 =====
-        features = []
-        
-        # 添加基础特征
-        features.extend(['weekday', 'stock_code_encoded'])
-        
-        # 生成滞后特征（过去N天的数据）
-        lag_cols = [
-            'pct_chg', 'small_net', 'medium_net', 'large_net', 'super_large_net', 
-            'total_net', 'vol', 'amount'
-        ]
-        
-        for lag in range(1, 6):  # 最近1~5天
-            for col in lag_cols:
-                df[f'{col}_lag{lag}'] = df[col].shift(lag)
-                features.append(f'{col}_lag{lag}')
-        
-        # 目标变量：下一天的涨跌幅
-        df['target'] = df['pct_chg'].shift(-1)
-        
-        # 删除NaN值
-        df = df.dropna().reset_index(drop=True)
-        
-        # 确保所有特征列都是float64类型
-        for col in features:
-            if df[col].dtype != 'float64':
-                print(f"转换列 {col} 为float64类型")
-                df[col] = df[col].astype('float64')
-        
-        print("\n=== 特征类型验证 ===")
-        print("特征列表:", features)
-        print("特征数量:", len(features))
-        for col in features:
-            print(f"{col}: {df[col].dtype}")
-        print("=================\n")
-        
-        # 打印涨跌幅对照表
-        print("\n=== 涨跌幅对照表 ===")
-        print("股票代码:", stock_codes[0])
-        comparison_df = pd.DataFrame({
-            '日期': df['trade_date'].dt.strftime('%Y-%m-%d'),
-            '星期': df['trade_date'].dt.strftime('%A'),
-            '当日涨跌幅(%)': df['pct_chg'].round(4),
-            '次日涨跌幅(%)': df['target'].round(4),
-            '当日成交量': df['vol'].round(2),
-            '当日成交额(万)': (df['amount']/10000).round(2),
-            '主力净流入(万)': (df['total_net']/10000).round(2)
-        })
-        print(comparison_df.head(20).to_string(index=False))
-        print("=================\n")
-
-        return df, features
-
+        return df
     finally:
         conn.close()
 
+def generate_targets(df):
+    """生成目标变量"""
+    df['target_1'] = df['pct_chg'].shift(-1)
+    df['target_2'] = df['pct_chg'].shift(-2)
+    df['target_1_cls'] = (df['target_1'] > 0).astype(int)
+    df['target_2_cls'] = (df['target_2'] > 0).astype(int)
+    return df.dropna().reset_index(drop=True)
+
+# 更新主函数
 if __name__ == "__main__":
     # 获取训练数据
     stock_codes = ['600519.SH']  # 定义要分析的股票代码
-    df, features = get_training_data(stock_codes,'20230201','20250301')
+    df = get_training_data(stock_codes, '20250201', '20250801')
     
+    # 生成目标变量
+    df = generate_targets(df)
+    
+    # 特征和目标
+    features = df.columns.difference(['trade_date', 'target_1', 'target_2', 'target_1_cls', 'target_2_cls'])
     X = df[features]
-    
-    # 将涨跌幅转换为涨跌标签（1表示涨，0表示跌）
-    y = (df['target'] > 0).astype(int)
+    y1, y2 = df['target_1'], df['target_2']
+    y1_cls, y2_cls = df['target_1_cls'], df['target_2_cls']
     
     # 使用时间顺序划分，保留最后20%作为测试集
-    split_idx = int(len(df) * 0.9)
+    split_idx = int(len(df) * 0.8)
     X_train, X_test = X[:split_idx], X[split_idx:]
-    y_train, y_test = y[:split_idx], y[split_idx:]
+    y1_train, y1_test = y1[:split_idx], y1[split_idx:]
+    y2_train, y2_test = y2[:split_idx], y2[split_idx:]
+    y1_cls_train, y1_cls_test = y1_cls[:split_idx], y1_cls[split_idx:]
+    y2_cls_train, y2_cls_test = y2_cls[:split_idx], y2_cls[split_idx:]
     
-    # LightGBM参数 - 改为二分类
-    params = {
-        'objective': 'binary',  # 改为二分类
-        'metric': 'auc',        # 使用AUC评估
+    # LightGBM参数
+    params_reg = {
+        'objective': 'regression',
+        'metric': 'rmse',
         'boosting_type': 'gbdt',
         'learning_rate': 0.05,
         'num_leaves': 31,
         'verbose': -1
     }
+    params_cls = {
+        'objective': 'binary',
+        'metric': 'auc',
+        'boosting_type': 'gbdt',
+        'learning_rate': 0.05,
+        'num_leaves': 31,
+        'verbose': -1
+    }
+    print("X_train shape:", X_train.shape)
+    print("X_train head:\n", X_train.head())
+    print("y1_train shape:", y1_train.shape)
+    print("y1_train head:\n", y1_train.head())
+    # 训练回归模型
+    train_data_1 = lgb.Dataset(X_train, label=y1_train)
+    train_data_2 = lgb.Dataset(X_train, label=y2_train)
+    model_1 = lgb.train(params_reg, train_data_1, num_boost_round=500)
+    model_2 = lgb.train(params_reg, train_data_2, num_boost_round=500)
     
-    # 训练模型
-    train_data = lgb.Dataset(X_train, label=y_train)
-    test_data = lgb.Dataset(X_test, label=y_test)
+    # 训练分类模型
+    train_data_1_cls = lgb.Dataset(X_train, label=y1_cls_train)
+    train_data_2_cls = lgb.Dataset(X_train, label=y2_cls_train)
+    model_1_cls = lgb.train(params_cls, train_data_1_cls, num_boost_round=500)
+    model_2_cls = lgb.train(params_cls, train_data_2_cls, num_boost_round=500)
     
-    callbacks = [
-        lgb.early_stopping(stopping_rounds=50),
-        lgb.log_evaluation(period=-1)
-    ]
+    # 预测
+    y1_pred = model_1.predict(X_test)
+    y2_pred = model_2.predict(X_test)
+    y1_cls_pred = model_1_cls.predict(X_test)
+    y2_cls_pred = model_2_cls.predict(X_test)
     
-    model = lgb.train(
-        params=params,
-        train_set=train_data,
-        num_boost_round=500,
-        valid_sets=[train_data, test_data],
-        callbacks=callbacks
-    )
+    # 输出预测结果
+    print("\n=== 预测结果 ===")
+    print("T+1 涨跌幅预测:", y1_pred)
+    print("T+2 涨跌幅预测:", y2_pred)
+    print("T+1 上涨概率:", y1_cls_pred)
+    print("T+2 上涨概率:", y2_cls_pred)
     
     # 模型评估
     y_pred_proba = model.predict(X_test)
@@ -242,7 +181,7 @@ if __name__ == "__main__":
         if sum(high_conf_mask) > 0:
             pred_accuracy = (y_test[high_conf_mask] == 1).mean() * 100
             coverage = sum(high_conf_mask) / len(y_test) * 100
-            avg_return = df.loc[X_test.index[high_conf_mask], 'target'].mean()
+            avg_return = df.loc[X_test.index[high_conf_mask], 'pct_chg'].mean()
             
             print(f"≥{threshold*100:3.0f}%  {pred_accuracy:6.2f}%  {coverage:6.2f}%  {pred_accuracy:6.2f}%  {avg_return:8.2f}%  {sum(high_conf_mask):6d}")
     
@@ -256,7 +195,7 @@ if __name__ == "__main__":
     
     # 特征重要性
     importance = pd.DataFrame({
-        'feature': features,
+        'feature': X_train.columns.tolist(),
         'importance': model.feature_importance()
     })
     importance = importance.sort_values('importance', ascending=False)
@@ -268,13 +207,13 @@ if __name__ == "__main__":
         '日期': df.loc[X_test.index, 'trade_date'].dt.strftime('%Y-%m-%d'),
         '星期': df.loc[X_test.index, 'trade_date'].dt.strftime('%A'),
         '当日涨跌幅': df.loc[X_test.index, 'pct_chg'].round(2),
-        '次日实际涨跌幅': df.loc[X_test.index, 'target'].round(2),
+        '次日实际涨跌幅': df.loc[X_test.index, 'pct_chg'].round(2), # 实际涨跌幅就是当日涨跌幅
         '上涨概率(%)': (y_pred_proba * 100).round(2),
         '预测结果': ['上涨' if p > 0.5 else '下跌' for p in y_pred_proba],
-        '实际结果': ['上涨' if x > 0 else '下跌' for x in df.loc[X_test.index, 'target']],
+        '实际结果': ['上涨' if x > 0 else '下跌' for x in y_test],
         '预测正确': ['√' if correct else '×' for correct in (y_test == (y_pred_proba > 0.5))],
         '成交额(万)': (df.loc[X_test.index, 'amount']/10000).round(0),
-        '主力净流入(万)': (df.loc[X_test.index, 'total_net']/10000).round(0),
+        '主力净流入(万)': (df.loc[X_test.index, 'net_amount']/10000).round(0),
     })
 
     print("\n=== 预测结果示例 ===")

@@ -29,6 +29,7 @@ import argparse
 from datetime import datetime
 from dateutil.parser import parse
 import sys
+import os
 
 def parse_date(date_str):
     """解析日期字符串为datetime对象"""
@@ -64,7 +65,11 @@ def get_script_command(script_name, start_date, force=False):
     Returns:
         list: 命令行参数列表
     """
-    cmd = ['python', script_name]
+    # 获取当前脚本所在目录的绝对路径
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(current_dir, script_name)
+    
+    cmd = ['python', script_path]
     script_format = SCRIPTS[script_name]['format']
     
     if script_format == 'start_date':
@@ -89,12 +94,16 @@ def run_script(script_name, start_date, force=False):
     try:
         cmd = get_script_command(script_name, start_date, force)
         
+        # 获取当前脚本所在目录
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
         print_with_time(f"开始运行 {script_name}")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd=current_dir  # 设置工作目录为当前脚本所在目录
         )
         
         # 实时输出脚本的日志

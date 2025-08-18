@@ -58,6 +58,7 @@ def get_training_data(stock_codes=['600519.SH'], start_date='20250201', end_date
         
         params = stock_codes + [start_date, end_date]
         cursor = conn.cursor()
+        print("sql",sql)
         cursor.execute(sql, params)
         rows = cursor.fetchall()
         
@@ -66,7 +67,6 @@ def get_training_data(stock_codes=['600519.SH'], start_date='20250201', end_date
         
         # 创建DataFrame
         df = pd.DataFrame(rows, columns=columns)
-        print(df.head())
         # 转换数值型列
         numeric_cols = columns[1:]  # 除去 trade_date
         for col in numeric_cols:
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # 获取训练数据
     stock_codes = ['600519.SH']  # 定义要分析的股票代码
     df = get_training_data(stock_codes, '20250201', '20250801')
-    
+    print("df 前20行:\n", df.head(20).to_string(index=False))
     # 生成目标变量
     df = generate_targets(df)
     

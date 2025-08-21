@@ -66,6 +66,83 @@ TUSHARE_TOKEN = 'gx03013e909f633ecb66722df66b360f070426613316ebf06ecd3482'
 ts.set_token(TUSHARE_TOKEN)
 pro = ts.pro_api()
 
+# 在文件开头添加字段映射关系
+# Tushare API字段到数据库字段的映射
+FIELD_MAPPINGS = {
+    # 基础数据
+    'ts_code': 'ts_code',           # 股票代码
+    'trade_date': 'trade_date',     # 交易日期
+    'open': 'open',                 # 开盘价
+    'high': 'high',                 # 最高价
+    'low': 'low',                   # 最低价
+    'close': 'close',               # 收盘价
+    'pre_close': 'pre_close',       # 昨收价
+    'change': 'change',             # 涨跌额
+    'pct_chg': 'pct_chg',          # 涨跌幅
+    'vol': 'vol',                   # 成交量（手）
+    'amount': 'amount',             # 成交额（千元）
+    
+    # 换手率指标
+    'turnover_rate': 'turnover_rate',         # 换手率
+    'turnover_rate_f': 'turnover_rate_f',     # 换手率(自由流通股)
+    'volume_ratio': 'volume_ratio',           # 量比
+    
+    # 估值指标
+    'pe': 'pe',                     # 市盈率
+    'pe_ttm': 'pe_ttm',             # 市盈率TTM
+    'pb': 'pb',                     # 市净率
+    'total_mv': 'total_mv',         # 总市值（万元）
+    'circ_mv': 'circ_mv',           # 流通市值（万元）
+    
+    # MACD指标
+    'macd': 'macd_bfq',                 # MACD指标
+    'macd_dif': 'macd_dif_bfq',         # MACD DIF值
+    'macd_dea': 'macd_dea_bfq',         # MACD DEA值
+    
+    # KDJ指标
+    'kdj_k': 'kdj_k_bfq',               # KDJ K值
+    'kdj_d': 'kdj_d_bfq',               # KDJ D值
+    'kdj_j': 'kdj_j_bfq',               # KDJ J值
+    
+    # RSI指标
+    'rsi_6': 'rsi_bfq_6',               # RSI-6值
+    'rsi_12': 'rsi_bfq_12',             # RSI-12值
+    'rsi_24': 'rsi_bfq_24',             # RSI-24值
+    
+    # BOLL指标
+    'boll_upper': 'boll_upper_bfq',     # BOLL上轨
+    'boll_mid': 'boll_mid_bfq',         # BOLL中轨
+    'boll_lower': 'boll_lower_bfq',     # BOLL下轨
+    
+    # 均线指标
+    'ma_5': 'ema_bfq_5',                 # 5日均线
+    'ma_10': 'ema_bfq_10',               # 10日均线
+    'ma_20': 'ema_bfq_20',               # 20日均线
+    'ma_30': 'ema_bfq_30',               # 30日均线
+    'ma_60': 'ema_bfq_60',               # 60日均线
+    
+    # BIAS指标
+    'bias1': 'bias1_bfq',               # 6日BIAS
+    'bias2': 'bias2_bfq',               # 12日BIAS
+    'bias3': 'bias3_bfq',               # 24日BIAS
+    
+    # DMI指标
+    'dmi_pdi': 'dmi_pdi_bfq',           # DMI上升动向值
+    'dmi_mdi': 'dmi_mdi_bfq',           # DMI下降动向值
+    'dmi_adx': 'dmi_adx_bfq',           # DMI平均动向值
+    'dmi_adxr': 'dmi_adxr_bfq',         # DMI评估动向值
+    
+    # CCI指标
+    'cci': 'cci_bfq',                   # CCI顺势指标
+    
+    # VR指标
+    'vr': 'vr_bfq',                     # VR容量比率
+    
+    # 统计指标
+    'updays': 'updays',             # 连涨天数
+    'downdays': 'downdays',         # 连跌天数
+}
+
 def parse_date(date_str):
     """解析日期字符串为datetime对象"""
     try:
@@ -207,20 +284,12 @@ def get_sqlalchemy_url():
     return f"mysql+pymysql://{DB_CONFIG['user']}:{password}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?charset={DB_CONFIG['charset']}"
 
 def update_stock_factor_pro_data(start_date=None, end_date=None, force_update=False):
-    """更新股票技术面因子(专业版)数据
-    
-    Args:
-        start_date: 开始日期，格式：YYYYMMDD
-        end_date: 结束日期，格式：YYYYMMDD
-        force_update: 是否强制更新（如果为True，则会覆盖已有数据）
-    """
+    """更新股票技术面因子(专业版)数据"""
     if not start_date:
-        # 获取最后更新日期
         last_date = get_last_trade_date()
         if last_date:
             start_date = (last_date + timedelta(days=1)).strftime('%Y%m%d')
         else:
-            # 如果没有数据，默认从30天前开始
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
     
     if not end_date:
@@ -234,15 +303,6 @@ def update_stock_factor_pro_data(start_date=None, end_date=None, force_update=Fa
         logging.error("未获取到交易日期")
         return
     
-    # 获取所有股票列表
-    try:
-        stocks = pro.stock_basic(exchange='', list_status='L')
-        stock_list = stocks['ts_code'].tolist()
-    except Exception as e:
-        logging.error(f"获取股票列表失败: {str(e)}")
-        return
-    
-    # 创建数据库连接
     engine = create_engine(get_sqlalchemy_url())
     
     total_dates = len(trade_dates)
@@ -251,51 +311,32 @@ def update_stock_factor_pro_data(start_date=None, end_date=None, force_update=Fa
             logging.info(f"正在处理日期 ({date_idx}/{total_dates}): {trade_date}")
             
             if force_update:
-                # 删除当天的数据
-                conn = None
-                cursor = None
-                try:
-                    conn = pymysql.connect(**DB_CONFIG)
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "DELETE FROM stock_factor_pro WHERE trade_date = %s",
-                        (trade_date,)
-                    )
-                    conn.commit()
-                    logging.info(f"已删除 {trade_date} 的历史数据")
-                except Exception as e:
-                    logging.error(f"删除历史数据失败: {str(e)}")
-                    if conn:
-                        conn.rollback()
-                finally:
-                    if cursor:
-                        cursor.close()
-                    if conn:
-                        conn.close()
+                with pymysql.connect(**DB_CONFIG) as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "DELETE FROM stock_factor_pro WHERE trade_date = %s",
+                            (trade_date,)
+                        )
+                        conn.commit()
+                        logging.info(f"已删除 {trade_date} 的历史数据")
             
             # 获取当天所有股票的技术面因子数据
             df = pro.stk_factor_pro(trade_date=trade_date)
             
             if not df.empty:
-                # 处理数据格式
+                # 重命名列（根据映射关系）
+                df = df.rename(columns=FIELD_MAPPINGS)
+                
+                # 处理日期格式
                 df['trade_date'] = pd.to_datetime(df['trade_date'])
-                
-                # 获取数据库表的所有字段
-                conn = pymysql.connect(**DB_CONFIG)
-                cursor = conn.cursor()
-                cursor.execute("DESC stock_factor_pro")
-                db_columns = [row[0] for row in cursor.fetchall()]
-                cursor.close()
-                conn.close()
-                
-                # 只保留数据库中存在的字段
-                existing_columns = [col for col in df.columns if col in db_columns]
-                df = df[existing_columns]
                 
                 # 确保数值列的类型正确
                 numeric_columns = df.select_dtypes(include=[np.number]).columns
                 for col in numeric_columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                # 只保留映射中定义的列
+                df = df[[col for col in FIELD_MAPPINGS.values() if col in df.columns]]
                 
                 # 写入数据库
                 df.to_sql(
@@ -309,8 +350,7 @@ def update_stock_factor_pro_data(start_date=None, end_date=None, force_update=Fa
             else:
                 logging.warning(f"{trade_date} 没有数据")
             
-            # 避免频繁调用接口
-            time.sleep(0.5)
+            time.sleep(0.5)  # 避免频繁调用接口
             
         except Exception as e:
             logging.error(f"处理日期 {trade_date} 时出错: {str(e)}")

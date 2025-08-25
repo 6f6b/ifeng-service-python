@@ -95,48 +95,48 @@ FIELD_MAPPINGS = {
     'circ_mv': 'circ_mv',           # 流通市值（万元）
     
     # MACD指标
-    'macd': 'macd_bfq',                 # MACD指标
-    'macd_dif': 'macd_dif_bfq',         # MACD DIF值
-    'macd_dea': 'macd_dea_bfq',         # MACD DEA值
+    'macd_bfq': 'macd',                 # MACD指标
+    'macd_dif_bfq': 'macd_dif',         # MACD DIF值
+    'macd_dea_bfq': 'macd_dea',         # MACD DEA值
     
     # KDJ指标
-    'kdj_k': 'kdj_k_bfq',               # KDJ K值
-    'kdj_d': 'kdj_d_bfq',               # KDJ D值
-    'kdj_j': 'kdj_j_bfq',               # KDJ J值
+    'kdj_k_bfq': 'kdj_k',               # KDJ K值
+    'kdj_d_bfq': 'kdj_d',               # KDJ D值
+    'kdj_bfq': 'kdj_j',               # KDJ J值
     
     # RSI指标
-    'rsi_6': 'rsi_bfq_6',               # RSI-6值
-    'rsi_12': 'rsi_bfq_12',             # RSI-12值
-    'rsi_24': 'rsi_bfq_24',             # RSI-24值
+    'rsi_bfq_6': 'rsi_6',               # RSI-6值
+    'rsi_bfq_12': 'rsi_12',             # RSI-12值
+    'rsi_bfq_24': 'rsi_24',             # RSI-24值
     
     # BOLL指标
-    'boll_upper': 'boll_upper_bfq',     # BOLL上轨
-    'boll_mid': 'boll_mid_bfq',         # BOLL中轨
-    'boll_lower': 'boll_lower_bfq',     # BOLL下轨
+    'boll_upper_bfq': 'boll_upper',     # BOLL上轨
+    'boll_mid_bfq': 'boll_mid',         # BOLL中轨
+    'boll_lower_bfq': 'boll_lower',     # BOLL下轨
     
     # 均线指标
-    'ma_5': 'ema_bfq_5',                 # 5日均线
-    'ma_10': 'ema_bfq_10',               # 10日均线
-    'ma_20': 'ema_bfq_20',               # 20日均线
-    'ma_30': 'ema_bfq_30',               # 30日均线
-    'ma_60': 'ema_bfq_60',               # 60日均线
+    'ema_bfq_5': 'ma_5',                 # 5日均线
+    'ema_bfq_10': 'ma_10',               # 10日均线
+    'ema_bfq_20': 'ma_20',               # 20日均线
+    'ema_bfq_30': 'ma_30',               # 30日均线
+    'ema_bfq_60': 'ma_60',               # 60日均线
     
     # BIAS指标
-    'bias1': 'bias1_bfq',               # 6日BIAS
-    'bias2': 'bias2_bfq',               # 12日BIAS
-    'bias3': 'bias3_bfq',               # 24日BIAS
+    'bias1_bfq': 'bias1',               # 6日BIAS
+    'bias2_bfq': 'bias2',               # 12日BIAS
+    'bias3_bfq': 'bias3',               # 24日BIAS
     
     # DMI指标
-    'dmi_pdi': 'dmi_pdi_bfq',           # DMI上升动向值
-    'dmi_mdi': 'dmi_mdi_bfq',           # DMI下降动向值
-    'dmi_adx': 'dmi_adx_bfq',           # DMI平均动向值
-    'dmi_adxr': 'dmi_adxr_bfq',         # DMI评估动向值
-    
+    'dmi_pdi_bfq': 'dmi_pdi',           # DMI上升动向值
+    'dmi_mdi_bfq': 'dmi_mdi',           # DMI下降动向值
+    'dmi_adx_bfq': 'dmi_adx',           # DMI平均动向值
+    'dmi_adxr_bfq': 'dmi_adxr',         # DMI评估动向值
+        
     # CCI指标
-    'cci': 'cci_bfq',                   # CCI顺势指标
+    'cci_bfq': 'cci',                   # CCI顺势指标
     
     # VR指标
-    'vr': 'vr_bfq',                     # VR容量比率
+    'vr_bfq': 'vr',                     # VR容量比率
     
     # 统计指标
     'updays': 'updays',             # 连涨天数

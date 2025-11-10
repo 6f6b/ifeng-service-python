@@ -8,6 +8,9 @@
     3. 个股资金流向数据
     4. 大盘资金流向数据
     5. 行业资金流向数据
+    6. 股票技术面因子(专业版)数据
+    7. 股票每日筹码及胜率数据
+    8. 股票每日筹码分布数据
 
 使用方法：
     1. 更新指定开始日期到今天的所有数据：
@@ -42,11 +45,14 @@ def parse_date(date_str):
 
 # 需要更新的脚本列表，使用字典来存储不同脚本的参数格式
 SCRIPTS = {
-    'block_moneyflow_update.py': {'format': 'start_date'},
-    'stock_daily_update.py': {'format': 'range'},
-    'stock_moneyflow_update.py': {'format': 'start_date'},
-    'market_moneyflow_update.py': {'format': 'start_date'},
-    'industry_moneyflow_update.py': {'format': 'start_date'}
+    # 'block_moneyflow_update.py': {'format': 'start_date'},
+    # 'stock_daily_update.py': {'format': 'range'},
+    # 'stock_moneyflow_update.py': {'format': 'start_date'},
+    # 'market_moneyflow_update.py': {'format': 'start_date'},
+    # 'industry_moneyflow_update.py': {'format': 'start_date'},
+    'stock_factor_pro_update.py': {'format': 'start_date'},
+    'stock_cyq_update.py': {'format': 'start_date'},
+    'stock_basic.py':{'format': 'none'}
 }
 
 def print_with_time(message):

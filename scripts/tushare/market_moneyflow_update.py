@@ -190,28 +190,29 @@ def update_market_moneyflow_data(start_date=None, end_date=None, force_update=Fa
         df = pro.moneyflow_mkt_dc(start_date=start_date, end_date=end_date)
         
         if not df.empty:
-            if force_update:
-                # 删除日期范围内的数据
-                conn = None
-                cursor = None
-                try:
-                    conn = pymysql.connect(**DB_CONFIG)
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "DELETE FROM market_moneyflow WHERE trade_date BETWEEN %s AND %s",
-                        (start_date, end_date)
-                    )
-                    conn.commit()
-                    logging.info(f"已删除 {start_date} 至 {end_date} 的历史数据")
-                except Exception as e:
-                    logging.error(f"删除历史数据失败: {str(e)}")
-                    if conn:
-                        conn.rollback()
-                finally:
-                    if cursor:
-                        cursor.close()
-                    if conn:
-                        conn.close()
+            # 先删除日期范围内的旧数据，避免重复
+            conn = None
+            cursor = None
+            try:
+                conn = pymysql.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM market_moneyflow WHERE trade_date BETWEEN %s AND %s",
+                    (start_date, end_date)
+                )
+                conn.commit()
+                deleted_count = cursor.rowcount
+                if deleted_count > 0:
+                    logging.info(f"已删除 {start_date} 至 {end_date} 的 {deleted_count} 条历史数据")
+            except Exception as e:
+                logging.error(f"删除历史数据失败: {str(e)}")
+                if conn:
+                    conn.rollback()
+            finally:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
             
             # 写入数据库
             df.to_sql(

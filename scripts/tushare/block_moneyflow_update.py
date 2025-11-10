@@ -220,28 +220,29 @@ def update_block_moneyflow_data(start_date=None, end_date=None, force_update=Fal
         try:
             logging.info(f"正在处理日期 ({date_idx}/{total_dates}): {trade_date}")
             
-            if force_update:
-                # 删除当天的数据
-                conn = None
-                cursor = None
-                try:
-                    conn = pymysql.connect(**DB_CONFIG)
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "DELETE FROM block_moneyflow WHERE trade_date = %s",
-                        (trade_date,)
-                    )
-                    conn.commit()
-                    logging.info(f"已删除 {trade_date} 的历史数据")
-                except Exception as e:
-                    logging.error(f"删除历史数据失败: {str(e)}")
-                    if conn:
-                        conn.rollback()
-                finally:
-                    if cursor:
-                        cursor.close()
-                    if conn:
-                        conn.close()
+            # 先删除该日期的旧数据，避免重复
+            conn = None
+            cursor = None
+            try:
+                conn = pymysql.connect(**DB_CONFIG)
+                cursor = conn.cursor()
+                cursor.execute(
+                    "DELETE FROM block_moneyflow WHERE trade_date = %s",
+                    (trade_date,)
+                )
+                conn.commit()
+                deleted_count = cursor.rowcount
+                if deleted_count > 0:
+                    logging.info(f"已删除 {trade_date} 的 {deleted_count} 条历史数据")
+            except Exception as e:
+                logging.error(f"删除历史数据失败: {str(e)}")
+                if conn:
+                    conn.rollback()
+            finally:
+                if cursor:
+                    cursor.close()
+                if conn:
+                    conn.close()
             
             # 获取当天的板块资金流向数据
             df = pro.moneyflow_cnt_ths(trade_date=trade_date)

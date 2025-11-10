@@ -326,15 +326,17 @@ def update_stock_factor_pro_data(start_date=None, end_date=None, force_update=Fa
         try:
             logging.info(f"正在处理日期 ({date_idx}/{total_dates}): {trade_date}")
             
-            if force_update:
-                with pymysql.connect(**DB_CONFIG) as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute(
-                            "DELETE FROM stock_factor_pro WHERE trade_date = %s",
-                            (trade_date,)
-                        )
-                        conn.commit()
-                        logging.info(f"已删除 {trade_date} 的历史数据")
+            # 先删除该日期的旧数据，避免重复
+            with pymysql.connect(**DB_CONFIG) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "DELETE FROM stock_factor_pro WHERE trade_date = %s",
+                        (trade_date,)
+                    )
+                    conn.commit()
+                    deleted_count = cursor.rowcount
+                    if deleted_count > 0:
+                        logging.info(f"已删除 {trade_date} 的 {deleted_count} 条历史数据")
             
             # 获取当天所有股票的技术面因子数据
             df = pro.stk_factor_pro(trade_date=trade_date)

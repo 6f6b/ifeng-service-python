@@ -52,7 +52,7 @@ SCRIPTS = {
     # 'industry_moneyflow_update.py': {'format': 'start_date'},
     'stock_factor_pro_update.py': {'format': 'start_date'},
     'stock_cyq_update.py': {'format': 'start_date'},
-    'stock_basic.py':{'format': 'none'}
+    'stock_basic_update.py': {'format': 'none'}
 }
 
 def print_with_time(message):

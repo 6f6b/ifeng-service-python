@@ -7,9 +7,9 @@ import logging
 import os
 import sys
 
-# 设置token
-ts.set_token('gx03013e909f633ecb66722df66b360f070426613316ebf06ecd3482')
-pro = ts.pro_api()
+from tushare_config import get_pro_api
+
+pro = get_pro_api()
 
 # 数据库配置
 DB_CONFIG = {

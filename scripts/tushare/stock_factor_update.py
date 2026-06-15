@@ -64,10 +64,9 @@ DB_CONFIG = {
     'charset': 'utf8mb4'
 }
 
-# Tushare配置
-TUSHARE_TOKEN = 'gx03013e909f633ecb66722df66b360f070426613316ebf06ecd3482'
-ts.set_token(TUSHARE_TOKEN)
-pro = ts.pro_api()
+from tushare_config import get_pro_api
+
+pro = get_pro_api()
 
 def parse_date(date_str):
     """解析日期字符串为datetime对象"""

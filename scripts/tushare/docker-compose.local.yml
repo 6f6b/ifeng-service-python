@@ -1,0 +1,18 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: stock-mysql-local
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: lf123456
+      MYSQL_DATABASE: stock
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"
+    volumes:
+      - stock-mysql-data:/var/lib/mysql
+      - ./sql/init_stock.sql:/docker-entrypoint-initdb.d/01-init_stock.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+volumes:
+  stock-mysql-data:

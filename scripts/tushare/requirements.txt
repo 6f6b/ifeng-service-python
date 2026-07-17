@@ -1,0 +1,4 @@
+pandas>=2.0.0
+tushare>=1.2.89
+pymysql>=1.1.0
+apscheduler>=3.10.0

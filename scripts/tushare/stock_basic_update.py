@@ -1,4 +1,4 @@
-"""拉取 stock_basic 并批量写入本地 MySQL。"""
+"""拉取 Tushare stock_basic 并写入 ifeng_research.instrument（asset_type=stock）。"""
 import argparse
 import logging
 import sys
@@ -33,13 +33,28 @@ BASIC_COLUMNS = [
     "delist_date",
     "is_hs",
 ]
-BASIC_UPDATE_COLUMNS = [
-    "symbol",
+INSTRUMENT_COLUMNS = [
+    "asset_type",
+    "inst_id",
     "name",
+    "exchange",
+    "ts_code",
     "area",
     "industry",
     "market",
+    "curr_type",
+    "list_status",
+    "list_date",
+    "delist_date",
+    "is_hs",
+]
+INSTRUMENT_UPDATE_COLUMNS = [
+    "name",
     "exchange",
+    "ts_code",
+    "area",
+    "industry",
+    "market",
     "curr_type",
     "list_status",
     "list_date",
@@ -72,6 +87,13 @@ def fetch_stock_basic() -> pd.DataFrame:
     return pd.concat(df_list, ignore_index=True)
 
 
+def to_instrument_df(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["asset_type"] = "stock"
+    out["inst_id"] = out["symbol"]
+    return out[INSTRUMENT_COLUMNS]
+
+
 def update_stock_basic(export_excel: bool = False) -> int:
     t_total = time.perf_counter()
     df = fetch_stock_basic()
@@ -80,6 +102,8 @@ def update_stock_basic(export_excel: bool = False) -> int:
     if export_excel:
         df.to_excel("stock_basic_info.xlsx", index=False)
         logger.info("已导出 stock_basic_info.xlsx")
+
+    inst_df = to_instrument_df(df)
 
     conn = None
     cursor = None
@@ -93,18 +117,18 @@ def update_stock_basic(export_excel: bool = False) -> int:
         t_db = time.perf_counter()
         rows = batch_upsert_df(
             cursor,
-            "stock_basic",
-            df,
-            BASIC_COLUMNS,
-            update_columns=BASIC_UPDATE_COLUMNS,
+            "instrument",
+            inst_df,
+            INSTRUMENT_COLUMNS,
+            update_columns=INSTRUMENT_UPDATE_COLUMNS,
         )
         db_sec = time.perf_counter() - t_db
         conn.commit()
-        logger.info(f"[耗时] 批量入库 stock_basic: {db_sec:.2f}s，{rows} 条")
+        logger.info(f"[耗时] 批量入库 instrument(stock): {db_sec:.2f}s，{rows} 条")
         logger.info(f"完成，总计 {time.perf_counter() - t_total:.2f}s")
         return rows
     except Exception as e:
-        logger.error(f"更新 stock_basic 失败: {e}")
+        logger.error(f"更新 instrument(stock) 失败: {e}")
         if conn:
             conn.rollback()
         raise
@@ -116,7 +140,7 @@ def update_stock_basic(export_excel: bool = False) -> int:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="股票基础信息更新（本地批量入库）")
+    parser = argparse.ArgumentParser(description="股票基础信息更新 → instrument 表")
     parser.add_argument("--excel", action="store_true", help="同时导出 Excel")
     args = parser.parse_args()
     update_stock_basic(export_excel=args.excel)

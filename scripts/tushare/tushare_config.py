@@ -1,15 +1,15 @@
-"""Tushare 代理配置（与 Java stk/cb 的 application.properties 一致）"""
+"""Tushare 代理配置（环境变量可覆盖）"""
 import os
 
 import tushare as ts
 
 TUSHARE_TOKEN = os.environ.get(
     "TUSHARE_TOKEN",
-    "6a16dca8f45929a32761e63eecb58938fd508c670302089db380a4ea",
+    "c8f6e3a592196b5fb7a4edee6e1c09faf001f38366f31a25d7661797",
 )
 TUSHARE_API_URL = os.environ.get(
     "TUSHARE_API_URL",
-    "http://121.41.121.204/q5ian/",
+    "http://cheap-host1.cheapyun.com:24145",
 )
 
 
